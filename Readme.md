@@ -1,64 +1,95 @@
-Bank Transactions (C Project)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bank Transactions (C Project)</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      color: #0074cc;
+    }
+    code {
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-family: monospace;
+    }
+    pre {
+      background: #272822;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    ul {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
 
-This is a simple terminal-based program in C to manage basic bank account operations using binary files. It's a menu-driven app that lets you add, update, delete, and view account details. All data is stored in a file called credit.dat, and there's an option to export account info to a readable text file.
+  <h1>💼 Bank Transactions (C Project)</h1>
 
+  <p>This is a simple <strong>terminal-based program in C</strong> to manage basic bank account operations using binary files. It's a menu-driven application that allows you to <em>add, update, delete, and view account details</em>. All data is stored in a file called <code>credit.dat</code>, and there's an option to export account info to a readable text file.</p>
 
-What It Does
+  <h2>🛠 What It Does</h2>
+  <ul>
+    <li>Add a new account with name and balance</li>
+    <li>Update the balance of an existing account</li>
+    <li>Delete an account</li>
+    <li>View all accounts in a formatted <code>.txt</code> file</li>
+  </ul>
 
-Add a new account with name and balance
+  <h2>📁 Files in This Project</h2>
+  <ul>
+    <li><code>trans.c</code> – Main C file with all logic</li>
+    <li><code>credit.dat</code> – Binary file where account data is stored</li>
+    <li><code>accounts.txt</code> – Exported text file of all active accounts</li>
+    <li><code>trans.exe</code> – Compiled version for Windows</li>
+    <li><code>clients.dat</code> – Not currently used (possibly test or leftover file)</li>
+  </ul>
 
-Update the balance of an existing account
+  <h2>💻 How to Compile and Run</h2>
 
-Delete an account
+  <h3>Using GCC</h3>
+  <pre><code>gcc trans.c -o trans.exe
+./trans.exe</code></pre>
 
-View all accounts in a formatted .txt file
+  <h3>Using Clang</h3>
+  <pre><code>clang trans.c -o transaction
+./transaction</code></pre>
 
-Files in This Project
+  <p>Once compiled, the program launches a simple menu in the terminal where you can interact with the system.</p>
 
-trans.c – main C file with all the logic
+  <h2>📌 Few Details</h2>
+  <ul>
+    <li>Account numbers range from <strong>1 to 100</strong></li>
+    <li>Each account has:
+      <ul>
+        <li>Account number</li>
+        <li>First name</li>
+        <li>Last name</li>
+        <li>Balance</li>
+      </ul>
+    </li>
+    <li>Adding an account that already exists is blocked (no overwrite)</li>
+    <li>Deleting an account simply clears it from the file</li>
+    <li>Tested and works on <strong>Windows and Linux</strong> (GCC & Clang)</li>
+  </ul>
 
-credit.dat – binary file where the accounts are stored
+  <p><strong>✅ Tip:</strong> Make sure your terminal is in the correct directory where <code>trans.c</code> is located before compiling or running.</p>
 
-accounts.txt – generated file with all account info (good for printing)
-
-trans.exe – compiled version for Windows
-
-clients.dat – not currently used, might be leftover/test file
-
-How to Compile and Run in GCC
-
-To compile:
-
-gcc trans.c -o trans.exe
-
-To run:
-
-./trans.exe
-
-How to Compile and Run in clang
-
-To compile:
-
-clang transaction.c -o transaction
-
-To run:
-
-./transaction
-
-You’ll get a simple menu in the terminal where you can pick what you want to do.
-
-make sure it's directory is correct.
-
-FEW DETAILS
-
-Account numbers go from 1 to 100
-
-Each account has: account number, first name, last name, and balance
-
-If you try to add an account that already exists, it won’t overwrite it
-
-Deleted accounts are just cleared in the file
-
-Works on Windows and Linux (tested with GCC and clang)
-
-
+</body>
+</html>
