@@ -3,40 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bank Transactions (C Project)</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #f4f4f4;
-      color: #333;
-      line-height: 1.6;
-      max-width: 900px;
-      margin: 30px auto;
-      padding: 20px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h1, h2 {
-      color: #0074cc;
-    }
-    code {
-      background: #eee;
-      padding: 2px 6px;
-      border-radius: 5px;
-      font-family: monospace;
-    }
-    pre {
-      background: #272822;
-      color: #f8f8f2;
-      padding: 15px;
-      border-radius: 5px;
-      overflow-x: auto;
-    }
-    ul {
-      margin-top: 0;
-    }
-  </style>
+  
 </head>
 <body>
 
