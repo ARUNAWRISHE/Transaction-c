@@ -1,6 +1,0 @@
-Acct  Full Name                Balance   
-1     John            Joe       422.00
-2     Bala            M         234658.00
-3     Mala            Seven     22244.00
-4     arunaw          rishe      78.00
-5     anand           p          0
