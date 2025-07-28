@@ -6,186 +6,136 @@
 
 #define HISTFILE "histor.txt"
 
-int generate_account_number() {
-    int last_num = 100000;
+int load_accounts(Account **arr_out, int *count_out) {
     FILE *fp = fopen(FILENAME, "rb");
+    if (!fp) { *arr_out = NULL; *count_out = 0; return 0; }
+    fseek(fp, 0, SEEK_END);
+    long sz = ftell(fp);
+    int count = sz / sizeof(Account);
+    rewind(fp);
+    if (count == 0) { fclose(fp); *arr_out = NULL; *count_out = 0; return 0; }
+    *arr_out = malloc(sz);
+    fread(*arr_out, sizeof(Account), count, fp);
+    fclose(fp);
+    *count_out = count;
+    return 1;
+}
+
+void save_accounts(Account *arr, int count) {
+    FILE *fp = fopen(FILENAME, "wb");
+    if (!fp) return;
+    fwrite(arr, sizeof(Account), count, fp);
+    fclose(fp);
+}
+
+static int cmp_acc(const void *a, const void *b) {
+    int an = ((const Account*)a)->account_number;
+    int bn = ((const Account*)b)->account_number;
+    return (an - bn);
+}
+
+Account* find_account_bsearch(int accnum, Account *arr, int count) {
+    Account key; key.account_number = accnum;
+    return (Account*)bsearch(&key, arr, count, sizeof(Account), cmp_acc);
+}
+
+int create_account_gui(const char *name, int *out_accnum, int *out_pin) {
+    Account *arr; int count;
+    int res = load_accounts(&arr, &count);
+    int next = 100001;
+    if (res && count) {
+        qsort(arr, count, sizeof(Account), cmp_acc);
+        next = arr[count-1].account_number + 1;
+        free(arr);
+    }
     Account acc;
-    if (fp) {
-        while (fread(&acc, sizeof(Account), 1, fp))
-            if (acc.account_number > last_num) last_num = acc.account_number;
-        fclose(fp);
-    }
-    return last_num + 1;
-}
-
-int generate_pin() {
-    return 1000 + rand() % 9000;
-}
-
-void save_account(Account *acc) {
+    strncpy(acc.name, name, sizeof(acc.name)-1);
+    acc.name[sizeof(acc.name)-1] = 0;
+    acc.account_number = next;
+    acc.pin = 1000 + rand() % 9000;
+    acc.balance = 0.0;
     FILE *fp = fopen(FILENAME, "ab");
-    if (!fp) { perror("File error"); return; }
-    fwrite(acc, sizeof(Account), 1, fp);
+    if (!fp) return 0;
+    fwrite(&acc, sizeof(Account), 1, fp);
     fclose(fp);
+    *out_accnum = acc.account_number;
+    *out_pin = acc.pin;
+    return 1;
 }
 
-void update_account(Account *acc) {
-    FILE *fp = fopen(FILENAME, "rb+");
-    if (!fp) { perror("File error"); return; }
-    Account tmp; long pos;
-    while ((pos = ftell(fp)), fread(&tmp, sizeof(Account), 1, fp)) {
-        if (tmp.account_number == acc->account_number) {
-            fseek(fp, pos, SEEK_SET);
-            fwrite(acc, sizeof(Account), 1, fp);
-            break;
-        }
+Account* login_fast(int acc_num, int pin) {
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) return NULL;
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    Account *acc = find_account_bsearch(acc_num, arr, count);
+    static Account result;
+    if (acc && acc->pin == pin) {
+        result = *acc;
+        free(arr);
+        return &result;
     }
-    fclose(fp);
-}
-
-Account* login() {
-    static Account acc;
-    int acc_num, pin;
-    printf("\nAccount number: ");
-    scanf("%d", &acc_num);
-    printf("PIN: ");
-    scanf("%d", &pin);
-
-    FILE *fp = fopen(FILENAME, "rb");
-    if (!fp) { perror("File error"); return NULL; }
-
-    while (fread(&acc, sizeof(Account), 1, fp))
-        if (acc.account_number == acc_num && acc.pin == pin) {
-            fclose(fp);
-            return &acc;
-        }
-    fclose(fp);
-    puts("Invalid credentials!");
+    free(arr);
     return NULL;
 }
 
-void create_account() {
-    Account acc;
-    acc.account_number = generate_account_number();
-    printf("Enter your name: ");
-    int c; while ((c = getchar()) != '\n' && c != EOF);
-    fgets(acc.name, sizeof(acc.name), stdin);
-    acc.name[strcspn(acc.name, "\n")] = 0;
-    acc.pin = generate_pin();
-    acc.balance = 0.0;
-    save_account(&acc);
-
-    puts("\nAccount created successfully!");
-    printf("Account Number: %d\nPIN: %d\n", acc.account_number, acc.pin);
-    puts("Please remember your credentials.\n");
-}
-
-void view_balance() {
-    Account *acc = login();
-    if (acc)
-        printf("\nWelcome, %s!\nAccount: %d\nBalance: Rs. %.2lf\n",
-               acc->name, acc->account_number, acc->balance);
-}
-
-void deposit() {
-    Account *acc = login();
-    if (!acc) return;
-    double amt;
-    printf("Amount to deposit: Rs. ");
-    if (scanf("%lf", &amt) != 1 || amt <= 0) { puts("Invalid amount."); return; }
+int deposit_fast(int acc_num, int pin, double amt, double *new_balance) {
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) return 0;
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    Account *acc = find_account_bsearch(acc_num, arr, count);
+    if (!acc || acc->pin != pin || amt <= 0) { free(arr); return 0; }
     acc->balance += amt;
-    update_account(acc);
-    printf("Deposit successful. New balance: Rs. %.2lf\n", acc->balance);
-    register_transaction(acc->account_number, "DEPOSIT", amt, acc->balance);
+    *new_balance = acc->balance;
+    save_accounts(arr, count);
+    register_transaction(acc_num, "DEPOSIT", amt, acc->balance);
+    free(arr);
+    return 1;
 }
 
-void withdraw() {
-    Account *acc = login();
-    if (!acc) return;
-    double amt;
-    printf("Amount to withdraw: Rs. ");
-    if (scanf("%lf", &amt) != 1 || amt <= 0 || amt > acc->balance) {
-        puts("Invalid amount."); return;
-    }
+int withdraw_fast(int acc_num, int pin, double amt, double *new_balance) {
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) return 0;
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    Account *acc = find_account_bsearch(acc_num, arr, count);
+    if (!acc || acc->pin != pin || amt <= 0 || amt > acc->balance) { free(arr); return 0; }
     acc->balance -= amt;
-    update_account(acc);
-    printf("Withdraw successful. New balance: Rs. %.2lf\n", acc->balance);
-    register_transaction(acc->account_number, "WITHDRAW", amt, acc->balance);
+    *new_balance = acc->balance;
+    save_accounts(arr, count);
+    register_transaction(acc_num, "WITHDRAW", amt, acc->balance);
+    free(arr);
+    return 1;
 }
 
-void change_pin() {
-    Account *acc = login();
-    if (!acc) return;
-    int old_pin, new_pin;
-    printf("Re-enter current PIN to confirm: ");
-    scanf("%d", &old_pin);
-    if (old_pin != acc->pin) { puts("PIN mismatch."); return; }
-    printf("Enter new 4-digit PIN: ");
-    scanf("%d", &new_pin);
-    if (new_pin < 1000 || new_pin > 9999) { puts("PIN must be 4 digits."); return; }
+int change_pin_fast(int acc_num, int old_pin, int new_pin) {
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) return 0;
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    Account *acc = find_account_bsearch(acc_num, arr, count);
+    if (!acc || acc->pin != old_pin || new_pin < 1000 || new_pin > 9999) { free(arr); return 0; }
     acc->pin = new_pin;
-    update_account(acc);
-    puts("PIN changed successfully.");
+    save_accounts(arr, count);
+    free(arr);
+    return 1;
 }
 
-void delete_account() {
-    int acc_num, pin, found = 0;
-    printf("\nEnter your account number to delete: ");
-    scanf("%d", &acc_num);
-    printf("Enter your PIN: ");
-    scanf("%d", &pin);
-
-    FILE *fp = fopen(FILENAME, "rb");
-    if (!fp) { puts("File error / No accounts found."); return; }
-    FILE *tmp = fopen("temp.dat", "wb");
-    if (!tmp) { puts("Cannot create temp file."); fclose(fp); return; }
-
-    Account acc;
-    while (fread(&acc, sizeof(Account), 1, fp)) {
-        if (acc.account_number == acc_num && acc.pin == pin) {
-            printf("\nAccount %d deleted successfully!\n", acc.account_number);
+int delete_account_fast(int acc_num, int pin) {
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) return 0;
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    int i; int found = 0;
+    for (i = 0; i < count; ++i) {
+        if (arr[i].account_number == acc_num && arr[i].pin == pin) {
             found = 1;
-            continue;
+            break;
         }
-        fwrite(&acc, sizeof(Account), 1, tmp);
     }
-    fclose(fp); fclose(tmp);
-
-    if (found) {
-        remove(FILENAME);
-        rename("temp.dat", FILENAME);
-    } else {
-        remove("temp.dat");
-        puts("Account not found, or PIN incorrect.");
-    }
+    if (!found) { free(arr); return 0; }
+    if (i < count-1) memmove(&arr[i], &arr[i+1], (count-i-1)*sizeof(Account));
+    save_accounts(arr, count-1);
+    free(arr);
+    return 1;
 }
 
-void detials() {
-    char username[30], password[30];
-    printf("\n--- Admin Login Required ---\n");
-    printf("Username: ");
-    scanf("%s", username);
-    printf("Password: ");
-    scanf("%s", password);
-
-    if (strcmp(username, "admin") != 0 || strcmp(password, "90253") != 0) {
-        puts("Access denied. Invalid admin credentials.");
-        return;
-    }
-
-    FILE *fp = fopen(FILENAME, "rb");
-    if (!fp) { puts("No accounts found."); return; }
-    Account acc;
-    printf("\n---- Stored accounts ----\n");
-    while (fread(&acc, sizeof(Account), 1, fp)) {
-        printf("Acc: %d, Name: %s, PIN: %d, Bal: %.2lf\n",
-               acc.account_number, acc.name, acc.pin, acc.balance);
-    }
-    puts("-------------------------");
-    fclose(fp);
-}
-
-// ---- TRANSACTION HISTORY ----
 void register_transaction(int account_number, const char *type, double amount, double balance) {
     FILE *fp = fopen(HISTFILE, "a");
     if (!fp) return;
@@ -198,21 +148,17 @@ void register_transaction(int account_number, const char *type, double amount, d
 }
 
 void get_transaction_history(int account_number, char *history, size_t history_size, int entered_pin, int *pin_ok) {
-    // First, check PIN in accounts file
     *pin_ok = 0;
-    FILE *fp = fopen(FILENAME, "rb");
-    if (!fp) { snprintf(history, history_size, "Cannot open accounts file."); return; }
-    Account acc;
-    while (fread(&acc, sizeof(Account), 1, fp)) {
-        if (acc.account_number == account_number) {
-            if (acc.pin == entered_pin) *pin_ok = 1;
-            break;
-        }
-    }
-    fclose(fp);
+    Account *arr; int count;
+    if (!load_accounts(&arr, &count)) { snprintf(history, history_size, "Cannot open accounts file."); return; }
+    qsort(arr, count, sizeof(Account), cmp_acc);
+    Account *acc = find_account_bsearch(account_number, arr, count);
+    if (acc && acc->pin == entered_pin) *pin_ok = 1;
+    free(arr);
+
     if (!*pin_ok) { snprintf(history, history_size, "Invalid credentials."); return; }
 
-    fp = fopen(HISTFILE, "r");
+    FILE *fp = fopen(HISTFILE, "r");
     if (!fp) { snprintf(history, history_size, "No history yet."); return; }
     char line[256];
     snprintf(history, history_size, "Date & Time           | Type    | Amount    | Balance\n"
